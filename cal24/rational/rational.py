@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 class rational:
-    #def __init__(self, numerator:int, denominator = 1):
     def __init__(self, *args, **kwargs):
         numerator = args[0]
         denominator = 1
@@ -11,7 +10,10 @@ class rational:
         elif type(numerator) == str:
             nl = numerator.split('/')
             if len(nl) == 1:
-                numerator = int(nl[0])
+                if nl[0].find('.') > 0:
+                    numerator = float(nl[0])
+                else:
+                    numerator = int(nl[0])
                 denominator = 1
             elif len(nl) == 2:
                 numerator = int(nl[0])
@@ -72,6 +74,8 @@ class rational:
         v = args[0]
         if type(v) == rational:
             return self._numerator * v._denominator == self._denominator * v._numerator
+        elif type(v) == float:
+            return round(abs(self._numerator/self._denominator - v), 7) == 0
         else:
             try:
                 return self.__eq__(rational(v))

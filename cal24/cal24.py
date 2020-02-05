@@ -4,6 +4,126 @@ import sys
 from rational.rational import rational
 
 
+class alg_exp_parser:
+    NUMBER = "NUMBER"
+    BLOCK = "BLOCK"
+    OPERATOR = "OPERATOR"
+    UNKNOWN = "UNKNOWN"
+
+    @staticmethod
+    def isdigit(expr: str) -> bool:
+        dot_num = 0
+        for i in range(0, len(expr)):
+            if expr[i].isdigit():
+                continue
+            elif expr[i] == '-' and i == 0 and len(expr) > 1:
+                continue
+            elif expr[i] == '.' and dot_num == 0:
+                dot_num += 1
+                continue
+            else:
+                return False
+        return True
+
+    @staticmethod
+    def get_expr_type(expr: str) -> str:
+        if alg_exp_parser.isdigit(expr):
+            return alg_exp_parser.NUMBER
+        if expr in ["+", "-", "*", "/"]:
+            return alg_exp_parser.OPERATOR
+        return alg_exp_parser.BLOCK
+
+    @staticmethod
+    def expr_split(expr: str) -> list:
+        tokens = []
+        l = len(expr)
+        i = 0
+        prev_block_type = None
+        while i < l:
+            c: str = expr[i]
+            if c == '(':
+                if prev_block_type != 'OPERATOR' and prev_block_type is not None:
+                    raise SyntaxError("Invalid format before bracket")
+                prev_block_type = alg_exp_parser.BLOCK
+                bracket_level = 1
+                i += 1
+                block_start = i
+                while i < l:
+                    c = expr[i]
+                    if c == '(':
+                        bracket_level += 1
+                    elif c == ")":
+                        bracket_level -= 1
+                        if bracket_level == 0:
+                            break
+                    i += 1
+                if bracket_level != 0:
+                    raise SyntaxError("Invalid format without bracket close")
+                tokens.append(expr[block_start:i])
+                i += 1
+            elif (c == '-' and prev_block_type is None) or c.isdigit() or c == '.':
+                if prev_block_type != alg_exp_parser.OPERATOR and prev_block_type is not None:
+                    raise SyntaxError("Invalid format before number")
+                prev_block_type = alg_exp_parser.NUMBER
+                block_start = i
+                i += 1
+                while i < l:
+                    c = expr[i]
+                    if not c.isdigit() and c != '.':
+                        break
+                    i += 1
+                if expr[block_start:i] == "-":
+                    raise SyntaxError("Invalid number format")
+                tokens.append(expr[block_start:i])
+            elif c in "+-*/":
+                if prev_block_type == alg_exp_parser.OPERATOR:
+                    raise SyntaxError("Invalid format before operator")
+                prev_block_type = alg_exp_parser.OPERATOR
+                block_start = i
+                i += 1
+                tokens.append(expr[block_start:i])
+            elif c == ' ' or c == '\t':
+                i += 1
+            else:
+                raise SyntaxError("Invalid char")
+        return tokens
+
+    @staticmethod
+    def valid_alg_expr(tokens: list) -> bool:
+        if len(tokens) % 2 != 1:
+            return False
+        for i in range(0, len(tokens)):
+            if i % 2 == 1 and alg_exp_parser.get_expr_type(tokens[i]) != alg_exp_parser.OPERATOR:
+                return False
+            if i % 2 == 0 and alg_exp_parser.get_expr_type(tokens[i]) == alg_exp_parser.OPERATOR:
+                return False
+        return True
+
+    @staticmethod
+    def get_cal_node(expr: str = None, tokens: list = None):
+        if not tokens:
+            tokens = alg_exp_parser.expr_split(expr)
+        if len(tokens) == 1:
+            type = alg_exp_parser.get_expr_type(tokens[0])
+            if  type == alg_exp_parser.NUMBER:
+                return cal_node(rational(tokens[0]))
+            elif type == alg_exp_parser.OPERATOR or type == alg_exp_parser.UNKNOWN:
+                raise SyntaxError("Invalid expressions")
+            else:
+                return alg_exp_parser.get_cal_node(tokens[0])
+        if not alg_exp_parser.valid_alg_expr(tokens):
+            raise SyntaxError("Invalid expressions")
+        if len(tokens) == 3:
+            return cal_node(tokens[1], left=alg_exp_parser.get_cal_node(expr=tokens[0]),
+                            right=alg_exp_parser.get_cal_node(expr=tokens[2]))
+        i = 1
+        for i in range(1, len(tokens), 2):
+            if tokens[i] in ['+', '-']:
+                break
+        return cal_node(tokens[i], left=alg_exp_parser.get_cal_node(tokens=tokens[0:i]),
+                        right=alg_exp_parser.get_cal_node(tokens=tokens[i+1:]))
+
+
 class cal_node:
     _OPERATOR = {
         '+': ("__add__", 0),
@@ -16,6 +136,8 @@ class cal_node:
         value = args[0]
         if type(value) == int:
             self._value = rational(value)
+        elif type(value) == rational:
+            self._value = value
         else:
             self._value = value
         self._left = kwargs.get("left")
@@ -108,10 +230,6 @@ class cal_node:
             if not func:
                 raise SyntaxError("Invalid op")
             return func(cal_node.cal(top.left), cal_node.cal(top.right))
-
-    @staticmethod
-    def get_top_node(expr: str):
-        pass
 
     @staticmethod
     def get_all_top_node(vlist: list) -> list:
