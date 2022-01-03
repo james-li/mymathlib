@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 
 from rational.rational import rational
 
@@ -105,7 +104,7 @@ class alg_exp_parser:
             tokens = alg_exp_parser.expr_split(expr)
         if len(tokens) == 1:
             type = alg_exp_parser.get_expr_type(tokens[0])
-            if  type == alg_exp_parser.NUMBER:
+            if type == alg_exp_parser.NUMBER:
                 return cal_node(rational(tokens[0]))
             elif type == alg_exp_parser.OPERATOR or type == alg_exp_parser.UNKNOWN:
                 raise SyntaxError("Invalid expressions")
@@ -121,7 +120,7 @@ class alg_exp_parser:
             if tokens[i] in ['+', '-']:
                 break
         return cal_node(tokens[i], left=alg_exp_parser.get_cal_node(tokens=tokens[0:i]),
-                        right=alg_exp_parser.get_cal_node(tokens=tokens[i+1:]))
+                        right=alg_exp_parser.get_cal_node(tokens=tokens[i + 1:]))
 
 
 class cal_node:
@@ -219,7 +218,7 @@ class cal_node:
         return False
 
     @staticmethod
-    def cal(top):
+    def cal(top: object) -> int:
         if top.is_num():
             return top.value
         else:
@@ -255,16 +254,30 @@ class cal_node:
     def get_permutation(vlist: list) -> list:
         if len(vlist) == 1:
             return [vlist]
-        rlist = []
+        rlist = {}
         r = []
         for i, v in enumerate(vlist):
             if v in rlist:
                 continue
-            rlist.append(v)
+            rlist[v] = True
             nlist = vlist[0:i] + vlist[i + 1:]
             for sublist in cal_node.get_permutation(nlist):
                 r.append([v] + sublist)
         return r
+
+    @staticmethod
+    def get_all_array(vlist: list, n: int) -> list:
+        if len(vlist) < n:
+            raise RuntimeError("Insufficient length")
+        if n == 1:
+            return [[x] for x in vlist]
+        if len(vlist) == n:
+            return [vlist]
+        rlist = []
+        for i in range(0, len(vlist) - n + 1):
+            for sublist in cal_node.get_all_array(vlist[i + 1:], n - 1):
+                rlist.append([vlist[i]] + sublist)
+        return rlist
 
     @value.setter
     def value(self, value):
@@ -278,24 +291,37 @@ class cal_node:
     def right(self, value):
         self._right = value
 
+    @staticmethod
+    def get_formula(vlist: list) -> set:
+        p_list = cal_node.get_permutation(vlist)
+        cal_node_set = set()
+        result_set = set()
+        for v in p_list:
+            tmp_list = cal_node.get_all_top_node(v)
+            cal_node_set.update(tmp_list)
+        for node in cal_node_set:
+            # print(node)
+            try:
+                if cal_node.cal(node) == 24:
+                    result_set.add(node)
+            except:
+                pass
+        return result_set
+
+    @staticmethod
+    def is_resolvable(vlist: list) -> bool:
+        p_list = cal_node.get_permutation(vlist)
+        for v in p_list:
+            tmp_list = cal_node.get_all_top_node(v)
+            for node in tmp_list:
+                if cal_node.cal(node) == 24:
+                    return True
+        return False
+
+
 
 if __name__ == "__main__":
-    try:
-        vlist = [int(sys.argv[i]) for i in range(1, 5)]
-    except:
-        vlist = [3, 3, 8, 8]
-    p_list = cal_node.get_permutation(vlist)
-    cal_node_set = set()
-    result_set = set()
-    for vlist in p_list:
-        tmp_list = cal_node.get_all_top_node(vlist)
-        cal_node_set.update(tmp_list)
-    for node in cal_node_set:
-        # print(node)
-        try:
-            if cal_node.cal(node) == 24:
-                result_set.add(node)
-        except:
-            pass
-    for node in result_set:
-        print("%s=24" % (node))
+    for vlist in cal_node.get_all_array(list(range(1, 11)), 4):
+        result_set = cal_node.get_formula(vlist)
+        if not result_set:
+            print(vlist)
