@@ -251,7 +251,34 @@ class cal_node:
             return r
 
     @staticmethod
-    def get_permutation(vlist: list) -> list:
+    def get_permutation(a: list):
+        n = len(a)
+        k = n - 2
+        inc = -1
+        n_factor = 1
+        for i in range(1, n + 1):
+            n_factor *= i
+        i = 0
+        while i < n_factor:
+            a[k], a[k + 1] = a[k + 1], a[k]
+            yield a.copy()
+            k += inc
+            i += 1
+            if k == -1:
+                inc = 1
+                k = 0
+                a[-2], a[-1] = a[-1], a[-2]
+                yield a.copy()
+                i += 1
+            if k == n - 1:
+                inc = -1
+                k = n - 2
+                a[0], a[1] = a[1], a[0]
+                yield a.copy()
+                i += 1
+
+    @staticmethod
+    def get_permutation_old(vlist: list) -> list:
         if len(vlist) == 1:
             return [vlist]
         rlist = {}
@@ -319,9 +346,10 @@ class cal_node:
         return False
 
 
-
 if __name__ == "__main__":
-    for vlist in cal_node.get_all_array(list(range(1, 11)), 4):
+    for r in cal_node.get_formula([3, 3, 8, 8]):
+        print(r)
+    for vlist in cal_node.get_all_array(list(range(1, 10)), 4):
         result_set = cal_node.get_formula(vlist)
         if not result_set:
             print(vlist)
