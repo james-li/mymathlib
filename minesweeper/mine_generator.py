@@ -3,9 +3,9 @@
 import numpy as np
 
 
-def neighbor_area(arr: np.ndarray, clicked_x: int, clicked_y: int) -> list:
-    x_area = [x for x in [clicked_x - 1, clicked_x, clicked_x + 1] if 0 <= x < arr.shape[1]]
-    y_area = [x for x in [clicked_y - 1, clicked_y, clicked_y + 1] if 0 <= x < arr.shape[0]]
+def neighbor_area(clicked_x: int, clicked_y: int, width: int, height: int) -> list:
+    x_area = [x for x in [clicked_x - 1, clicked_x, clicked_x + 1] if 0 <= x < width]
+    y_area = [x for x in [clicked_y - 1, clicked_y, clicked_y + 1] if 0 <= x < height]
     return np.array(np.meshgrid(x_area, y_area)).T.reshape(-1, 2)
 
 
@@ -41,7 +41,7 @@ def generate_mine_map(width: int, height: int, mine_number: int, clicked_x: int 
                 if arr[y, x]:
                     mines[(x, y)] = 9
                 else:
-                    neighbor = neighbor_area(arr, x, y)
+                    neighbor = neighbor_area(x, y, width, height)
                     n = 0
                     for _x, _y in neighbor:
                         if arr[_y, _x]:
@@ -67,9 +67,33 @@ def colored_mine(mines, blank_area, x, y):
         return GRAY + str(mines[(x, y)])
 
 
-def miner_sweeper(mines, blank_area):
-    pass
-
+def miner_sweeper(mines, width, height, init_blank_area: dict):
+    revealed_area = {}
+    for p in init_blank_area.keys():
+        revealed_area[p] = (init_blank_area[p], 0)  # (mine_number, revealed_number)
+    while True:
+        investigate_area = {}
+        for p in revealed_area.keys():
+            mine_number, revealed_number = revealed_area[p]
+            if mine_number == revealed_number:  # all mines revealed
+                continue
+            x, y = p
+            neighbor = neighbor_area(x, y, width, height)
+            for _x, _y in neighbor:
+                if (_x, _y) not in revealed_area:
+                    i_lst = investigate_area.get(p, [])
+                    i_lst.append((_x, _y))
+            if (mine_number - revealed_number) == len(investigate_area.get(p, [])):
+                for mine in list(investigate_area.get(p, [])):
+                    revealed_area[mine] = (9, 9)
+                    revealed_number += 1
+                    investigate_area.pop(mine)
+                revealed_area[p] = (mine_number, revealed_number)
+        for p1 in investigate_area.keys():
+            for p2 in investigate_area.keys():
+                if p1 == p2:
+                    continue
+                
 
 if __name__ == "__main__":
     mines, blank_area = generate_mine_map(30, 16, 99, 10, 10, 9)
