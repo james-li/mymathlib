@@ -10,7 +10,9 @@ class BoomException(BaseException):
 def neighbor_area(clicked_x: int, clicked_y: int, width: int, height: int) -> list:
     x_area = [x for x in [clicked_x - 1, clicked_x, clicked_x + 1] if 0 <= x < width]
     y_area = [x for x in [clicked_y - 1, clicked_y, clicked_y + 1] if 0 <= x < height]
-    return np.array(np.meshgrid(x_area, y_area)).T.reshape(-1, 2)
+    r = [tuple(x) for x in np.array(np.meshgrid(x_area, y_area)).T.reshape(-1, 2)]
+    r.remove((clicked_x, clicked_y))
+    return r
 
 
 def expand_area(arr: np.ndarray, mines: dict, clicked_x: int, clicked_y: int, blank_area: dict = {}) -> dict:
@@ -24,7 +26,7 @@ def expand_area(arr: np.ndarray, mines: dict, clicked_x: int, clicked_y: int, bl
                 blank_area.update(expand_area(arr, mines, x, y, blank_area))
         else:
             blank_area[(x, y)] = 2
-    return blank_area
+    return {p: mines[p] for p in blank_area.keys()}
 
 
 def generate_mine_map(width: int, height: int, mine_number: int, clicked_x: int = 0, clicked_y: int = 0,
@@ -72,10 +74,12 @@ def colored_mine(mines, blank_area, x, y):
         return GRAY + "%02d" % (mines[(x, y)])
 
 
-def is_neighbor(p1, p2):
-    x1, y1 = p1
-    x2, y2 = p2
-    return (abs(x1 - x2) == 1 and y1 == y2) or (x1 == x2 and abs(y1 - y2) == 1)
+def get_common_neighbor(p1_neighbor, p2_neighbor):
+    common_neighbor = []
+    for p in p1_neighbor:
+        if p in p2_neighbor:
+            common_neighbor.append(tuple(p))
+    return common_neighbor
 
 
 def mine_sweeper(mines, width, height, init_blank_area: dict):
@@ -114,7 +118,7 @@ def mine_sweeper(mines, width, height, init_blank_area: dict):
         for p1 in list(revealed_area.keys()):
             p1_lst.append(p1)
             for p2 in list(revealed_area.keys()):
-                if p2 in p1_lst or not is_neighbor(p1, p2):
+                if p2 in p1_lst or not get_common_neighbor(p1, p2, width, height):
                     continue
 
 
