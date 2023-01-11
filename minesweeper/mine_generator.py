@@ -3,6 +3,10 @@
 import numpy as np
 
 
+class BoomException(BaseException):
+    pass
+
+
 def neighbor_area(clicked_x: int, clicked_y: int, width: int, height: int) -> list:
     x_area = [x for x in [clicked_x - 1, clicked_x, clicked_x + 1] if 0 <= x < width]
     y_area = [x for x in [clicked_y - 1, clicked_y, clicked_y + 1] if 0 <= x < height]
@@ -68,30 +72,50 @@ def colored_mine(mines, blank_area, x, y):
         return GRAY + "%02d" % (mines[(x, y)])
 
 
+def is_neighbor(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return (abs(x1 - x2) == 1 and y1 == y2) or (x1 == x2 and abs(y1 - y2) == 1)
+
+
 def mine_sweeper(mines, width, height, init_blank_area: dict):
-    revealed_area = {x: (mines[x], 0) for x in init_blank_area.keys()}
+    revealed_area = {x: mines[x] for x in init_blank_area.keys()}
     while True:
-        investigate_area = {}
         for p in list(revealed_area.keys()):
-            mine_number, revealed_number = revealed_area[p]
-            if mine_number == revealed_number:  # all mines revealed
+            mine_number = revealed_area[p]
+            revealed_number = 0
+            revealed_mines = 0
+            if mine_number == 9:
                 continue
             x, y = p
             neighbor = neighbor_area(x, y, width, height)
-            revealed_mines = 0
-            for _x, _y in neighbor:
-                if (_x, _y) not in revealed_area:
-                    i_lst = investigate_area.get(p, [])
-                    i_lst.append((_x, _y))
-                    investigate_area[p] = i_lst
-                elif revealed_area[(_x, _y)][0] == 9:  # revealed_mine
+            i_lst = []
+            for _pos in neighbor:
+                pos = tuple(_pos)
+                if pos not in revealed_area:
+                    i_lst.append(pos)
+                elif revealed_area[pos] == 9:
                     revealed_mines += 1
-            if (mine_number - revealed_number - revealed_mines) == len(investigate_area.get(p, [])):
-                for mine in list(investigate_area.get(p, [])):
-                    revealed_area[mine] = (9, 9)
-                    revealed_number += 1
-                    investigate_area.pop(mine)
-                revealed_area[p] = (mine_number, revealed_number)
+            if (mine_number - revealed_mines) == len(i_lst):
+                # dig mine
+                for mine in i_lst:
+                    revealed_area[mine] = 9
+                    revealed_mines += 1
+                # reveal safe area
+            if mine_number == revealed_mines:
+                for _pos in neighbor:
+                    pos = tuple(_pos)
+                    if pos not in revealed_area:
+                        if mines[pos] == 9:
+                            raise BoomException("Boom!!!!!")
+                        revealed_area[pos] = mines[pos]
+        ## TODO: 比较相邻两个位置，标识
+        p1_lst = []
+        for p1 in list(revealed_area.keys()):
+            p1_lst.append(p1)
+            for p2 in list(revealed_area.keys()):
+                if p2 in p1_lst or not is_neighbor(p1, p2):
+                    continue
 
 
 if __name__ == "__main__":
