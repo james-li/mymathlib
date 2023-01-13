@@ -144,8 +144,8 @@ class mine_generator(object):
                     updated = self.sweep_mine(mine_area)
                 if safe_area:
                     updated |= self.clear_safe_area(safe_area)
-                if updated:
-                    return True
+        if updated:
+            return True
         return False
 
     def get_unrevealed_mines(self, p: tuple) -> int:
@@ -167,18 +167,20 @@ def neighbor_area(clicked_x: int, clicked_y: int, width: int, height: int) -> li
     return r
 
 
-def expand_area(mines: dict, clicked_x: int, clicked_y: int, width, height, blank_area: dict = {}) -> dict:
+def expand_area(mines: dict, clicked_x: int, clicked_y: int, width, height, init_blank_area: dict = None) -> dict:
+    if init_blank_area is None:
+        init_blank_area = {}
     if mines[(clicked_x, clicked_y)] != 0:
-        return blank_area
+        return init_blank_area
     neighbor = neighbor_area(clicked_x, clicked_y, width, height)
     for x, y in neighbor:
         if (x, y) != (clicked_x, clicked_y):
-            if (x, y) not in blank_area:
-                blank_area[(x, y)] = 1
-                blank_area.update(expand_area(mines, x, y, width, height, blank_area))
+            if (x, y) not in init_blank_area:
+                init_blank_area[(x, y)] = 1
+                init_blank_area.update(expand_area(mines, x, y, width, height, init_blank_area))
         else:
-            blank_area[(x, y)] = 2
-    return blank_area
+            init_blank_area[(x, y)] = 2
+    return init_blank_area
 
 
 def generate_mine_map(width: int, height: int, mine_number: int, clicked_x: int = 0, clicked_y: int = 0,
@@ -208,7 +210,7 @@ def generate_mine_map(width: int, height: int, mine_number: int, clicked_x: int 
         blank_area = expand_area(mines, clicked_x, clicked_y, width, height)
         if len(blank_area) < blank_size:
             continue
-        return (mines, {p: mines[p] for p in blank_area.keys() if mines[p] != 9})
+        return mines, {p: mines[p] for p in blank_area.keys() if mines[p] != 9}
 
 
 WHITE = '\033[0m'
